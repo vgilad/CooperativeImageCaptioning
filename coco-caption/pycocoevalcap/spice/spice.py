@@ -1,11 +1,8 @@
-from __future__ import division
+
 import os
-import sys
 import subprocess
-import threading
 import json
 import numpy as np
-import ast
 import tempfile
 
 # Assumes spice.jar is in the same directory as spice.py.  Change as needed.
@@ -22,36 +19,36 @@ class Spice:
     def float_convert(self, obj):
         try:
             return float(obj)
-        except:
+        except Exception as e:
             return np.nan
 
     def compute_score(self, gts, res):
-        assert (sorted(gts.keys()) == sorted(res.keys()))
+        assert(sorted(gts.keys()) == sorted(res.keys()))
         imgIds = sorted(gts.keys())
 
         # Prepare temp input file for the SPICE scorer
         input_data = []
-        for id in imgIds:
-            hypo = res[id]
-            ref = gts[id]
+        for idx in imgIds:
+            hypo = res[idx]
+            ref = gts[idx]
 
             # Sanity check.
-            assert (type(hypo) is list)
-            assert (len(hypo) == 1)
-            assert (type(ref) is list)
-            assert (len(ref) >= 1)
+            assert(type(hypo) is list)
+            assert(len(hypo) == 1)
+            assert(type(ref) is list)
+            assert(len(ref) >= 1)
 
             input_data.append({
-                "image_id": id,
-                "test": hypo[0],
-                "refs": ref
+              "image_id": idx,
+              "test": hypo[0],
+              "refs": ref
             })
 
         cwd = os.path.dirname(os.path.abspath(__file__))
         temp_dir = os.path.join(cwd, TEMP_DIR)
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
-        in_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
+        in_file = tempfile.NamedTemporaryFile(mode='w', delete=False, dir=temp_dir)
         json.dump(input_data, in_file, indent=2)
         in_file.close()
 
@@ -62,13 +59,11 @@ class Spice:
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
         spice_cmd = ['java', '-jar', '-Xmx8G', SPICE_JAR, in_file.name,
-                     '-cache', cache_dir,
-                     '-out', out_file.name,
-                     '-subset',
-                     '-silent'
-                     ]
-        subprocess.check_call(spice_cmd,
-                              cwd=os.path.dirname(os.path.abspath(__file__)))
+                     '-cache', cache_dir, '-out', out_file.name,
+                     '-subset', '-silent']
+        subprocess.check_call(
+            spice_cmd,
+            cwd=os.path.dirname(os.path.abspath(__file__)))
 
         # Read and process results
         with open(out_file.name) as data_file:
@@ -86,12 +81,10 @@ class Spice:
         for image_id in imgIds:
             # Convert none to NaN before saving scores over subcategories
             score_set = {}
-            for category, score_tuple in imgId_to_scores[image_id].iteritems():
-                score_set[category] = {k: self.float_convert(v) for k, v in
-                                       score_tuple.items()}
+            for category, score_tuple in imgId_to_scores[image_id].items():
+                score_set[category] = {k: self.float_convert(v) for k, v in list(score_tuple.items())}
             scores.append(score_set)
         return average_score, scores
 
     def method(self):
         return "SPICE"
-

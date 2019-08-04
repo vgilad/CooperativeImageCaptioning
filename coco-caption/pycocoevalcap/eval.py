@@ -55,30 +55,7 @@ class COCOEvalCap:
         # =================================================
         for scorer, method in scorers:
             print('computing %s score...'%(scorer.method()))
-            if method == "SPICE":
-
-                gts_name = self.ckpt_path + '/gts.json'
-                res_name = self.ckpt_path + '/res.json'
-                with open(gts_name, 'w') as f:
-                    json.dump(gts, f)
-                with open(res_name, 'w') as f:
-                    json.dump(res, f)
-                cmd = "/cortex/users/gilad/anaconda3/envs/discaption27/bin" \
-                      "/python2.7 " \
-                      "/home/lab/vgilad/PycharmProjects/JointImageCaptioning" \
-                      "/coco-caption/pycocoevalcap/eval_spice.py " + \
-                      "--ckpt_path " + self.ckpt_path
-                os.system(cmd)
-                with open(self.ckpt_path + '/score.json') as f:
-                    score = json.load(f)
-                with open(self.ckpt_path + '/scores.json') as f:
-                    scores = json.load(f)
-                os.remove(gts_name)
-                os.remove(res_name)
-                os.remove(self.ckpt_path + '/score.json')
-                os.remove(self.ckpt_path + '/scores.json')
-            else:
-                score, scores = scorer.compute_score(gts, res)
+            score, scores = scorer.compute_score(gts, res)
             if type(method) == list:
                 for sc, scs, m in zip(score, scores, method):
                     self.setEval(sc, m)
