@@ -101,15 +101,7 @@ class AlternatingJointModel(nn.Module):
         self.batch_size = opt.batch_size
         self.vse_loss_weight = opt.vse_loss_weight
         self.caption_loss_weight = opt.caption_loss_weight
-        self.soft_cider = getattr(opt, 'soft_cider', 0)
         self.df = getattr(opt, 'df', 'coco-val')
-        # Load word to index dictionary to use in soft cider case
-        if self.soft_cider:
-            self.word_to_ix = json.load(open(os.path.join(os.path.dirname(
-                self.opt.input_json), 'word_to_ix.json')))
-            # Load index to word as well for soft cider
-            self.info = json.load(open(self.opt.input_json))
-            self.ix_to_word = self.info['ix_to_word']
         # none, reinforce, gumbel, multinomial
         self.retrieval_reward = opt.retrieval_reward
         # In case of training listener after training speaker with
@@ -437,69 +429,6 @@ class AlternatingJointModel(nn.Module):
 
         return loss
 
-    def change_method(self):
-        if self.retrieval_reward == 'reinforce':
-            self.caption_generator.retrieval_reward = 'multinomial_soft'
-
-    def load_method(self):
-        if self.retrieval_reward == 'reinforce':
-            self.caption_generator.retrieval_reward = \
-                self.retrieval_reward
-
-    def caption_for_soft_cider(self, fc_feats, att_feats, att_masks):
-        # generate sentences if they weren't already generated.
-        # used when only optimizing the speaker with soft cider.
-
-        # if 'reinforce' Change method to produce one hot vector
-        self.change_method()
-        word_index, _seqs, _sampleLogProbs = self.caption_generator.sample(
-            fc_feats, att_feats, att_masks, {
-                'sample_max': 0, 'temperature': 1,
-                'use_one_hot': 1})
-        # if 'reinforce' Change back to it
-        self.load_method()
-        # seqs is one-hot vector"""
-        # add manually BOS token to _seqs
-        if torch.cuda.is_available():
-            one_hot_bos_token = torch.zeros(
-                self.opt.batch_size, 1,
-                self.caption_generator.vocab_size + 2).cuda()
-        else:  # CPU()
-            one_hot_bos_token = torch.zeros(
-                self.opt.batch_size, 1,
-                self.caption_generator.vocab_size + 2)
-        _seqs = torch.cat([one_hot_bos_token, _seqs], 1)
-
-        return _seqs
-
-    def calc_soft_cider(self, data, _seqs, loss):
-
-        # df = 'corpus'  # 'corpus' or 'coco-val'
-        # Remove BOS token. in to places, its representation as the
-        # first word of the caption and in each vector remove last
-        # element that represent BOS
-        _seqs = _seqs[:, 1:, :-1]
-        # Create  a list of length batch_size where each element
-        # in the list is itself a list containing 5 target
-        # sentences in string format.
-        gts_batch = []
-        for image in data['gts']:
-            # Move ground truth to int tensor
-            image = torch.tensor(image.astype('double')).type(
-                torch.int)
-
-            gts_batch.append(utils.decode_sequence(self.ix_to_word,
-                                                   image))
-
-        scorer = Cider(df=self.df, word_index=self.word_to_ix)
-        scores = scorer.compute_score(gts_batch, _seqs)
-        loss_cider = - torch.mean(scores)
-        loss += self.cider_optimization * loss_cider
-        self._loss['loss_cider'] = loss_cider.data[0]
-
-        return loss
-
-
     def forward(self, fc_feats, seq, masks, data, att_feats, att_masks, \
                 is_alternating=False, alternating_turn=None):
         '''
@@ -558,26 +487,18 @@ class AlternatingJointModel(nn.Module):
                                                   data, loss)
             # CIDER loss
             if self.cider_optimization:
-                if not self.soft_cider:  # Reinforce case
-                    if 'gen_result' not in locals():
-                        gen_result, sample_logprobs, gen_masks = \
-                            self.gen_result_for_cider(fc_feats, att_feats,
-                                             att_masks)
+                if 'gen_result' not in locals():
+                    gen_result, sample_logprobs, gen_masks = \
+                        self.gen_result_for_cider(fc_feats, att_feats,
+                                         att_masks)
 
-                    if 'greedy_res' not in locals():
-                        greedy_res = self.greedy_res_for_cider(
-                            fc_feats, att_feats, att_masks)
+                if 'greedy_res' not in locals():
+                    greedy_res = self.greedy_res_for_cider(
+                        fc_feats, att_feats, att_masks)
 
-                    loss = self.traditional_cider(
-                        fc_feats, att_feats, att_masks, data, loss,
-                        gen_result, greedy_res, sample_logprobs, gen_masks)
-                else:  # Soft cider
-                    if '_seqs' not in locals() or self.retrieval_reward == \
-                            'reinforce':
-                        _seqs = self.caption_for_soft_cider(
-                            fc_feats, att_feats, att_masks)
-
-                    loss = self.calc_soft_cider(data, _seqs, loss)
+                loss = self.traditional_cider(
+                    fc_feats, att_feats, att_masks, data, loss,
+                    gen_result, greedy_res, sample_logprobs, gen_masks)
             return loss
 
 
