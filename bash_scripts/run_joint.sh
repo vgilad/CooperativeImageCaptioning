@@ -11,35 +11,29 @@
 #    batch size
 : ' Command line running examples
 All flags have default values, send to scripts only unique flags for this run
-Example 1 - For dsi 01, gpu 3, Optimization gumbel, lr 3e-5 and
+Example 1 - Optimization gumbel, gpu 3, lr 3e-5 and
 disc weight 0.05:
-sh bash_scripts/run_joint.sh -S 01 -G 3 -o gumbel -l 3e-5 -D 0.05
+bash_scripts/run_joint.sh -G 3 -o gumbel -l 3e-5 -D 0.05
 
-Example 2 - For dsi 03, gpu 0, Optimization multinomial, lr_decay 0.7 and
+Example 2 - Optimization multinomial_soft, gpu 2, lr_decay 0.7 and
 learning rate decay every 12:
-sh bash_scripts/run_joint.sh -S 03 -G 0 -o multinomial -d 0.7 -e 12
+bash_scripts/run_joint.sh -G 2 -o multinomial_soft -d 0.7 -e 12
 
-Example 3 - For ctx 19, gpu 1, Optimization reinforce alternate, batch size 50,
+Example 3 - Optimization reinforce alternate, gpu 1, batch size 50,
 caption loss weight 0.5 and vse loss wight 0.1:
-sh bash_scripts/run_joint.sh -S 19 -G 1 -o reinforce -b 50 -c 0.5 -v 0.1
+bash_scripts/run_joint.sh -G 1 -o reinforce -b 50 -c 0.5 -v 0.1
 
-Example 4 - For Optimization reinforce only speaker training,
+Example 4 - For Optimization reinforce only speaker training, gpu 0,
 caption loss weight 0.5:
-sh bash_scripts/run_joint.sh -o reinforce_speaker -c 0.5
+bash_scripts/run_joint.sh -G 0 -o reinforce_speaker -c 0.5
 
-Example 5 - For dsi 01, gpu 3, Optimization reinforce alternate,
-caption loss weight 0.1 and vse loss wight 0.1, Cider loss 0.1 Disc loss is 0.9,
-Disc baseLine is gt (ground truth):
-sh bash_scripts/run_joint.sh -S 01 -G 3 -o reinforce -c 0.1 -v 0.1 -D 0.9 -r gt
-
-Example 6 - For running on current machine, Optimization reinforce alternate,
-caption loss weight 0.1:
-sh bash_scripts/run_joint.sh -M 1 -o reinforce -c 0.1
+Example 5 - Optimization reinforce alternate, run on CPU
+caption loss weight 0.1, vse loss 0.1:
+bash_scripts/run_joint.sh -C 1 -o reinforce -c 0.12345 -v 0.1
 
 '
 
 # Default values
-DSISERVER=01
 gpu=0
 discriminative=0.01
 temperature=1
@@ -58,20 +52,17 @@ prob=0.25
 prob_gumbel_multinomial=""
 softmax_cooling=0
 max_epochs=350
-machine=0
 softmax_cooling_decay_factor=""
 use_docker=0
-dataset='coco'  # conceptual
+dataset='coco'  # flickr30
 annealing=0 # temperature_annealing_factor
 temperature_annealing_factor=""
 annealing_every=0
 num_iteration_for_annealing=""
 
-while getopts 'S:G:M:D:t:l:d:e:b:v:c:o:r:E:C:p:O:u:I:a:n:' flag; do
+while getopts 'S:G:D:t:l:d:e:b:v:c:o:r:E:C:p:O:u:I:a:n:' flag; do
   case "${flag}" in
-    S) DSISERVER="${OPTARG:-01}";;
     G) gpu="${OPTARG:-0}" ;;
-    M) machine="${OPTARG:-0}";;
     D) discriminative="${OPTARG:-0.01}" ;;
     t) temperature="${OPTARG:-5}" ;;
     l) lr="${OPTARG:-5e-4}" ;;
@@ -111,13 +102,6 @@ fi
 fixed_dir+="_BS${batch?}"    ## include the other flags
 if [ ${use_docker?} -eq 1 ]; then
   jic_root_dir="/project/artifacts/DC/our_trained_models/models/"
-else
-  if [ -z ${jic_root_dir} ]; then
-    #   jic_root_dir="/cortex/users/gilad/DiscCaptioning_files/our_trained_models
-    # /models"
-    jic_root_dir="/cortex/users/gilad/DiscCaptioning_files/our_trained_models"
-    jic_root_dir+="/debug_models"
-  fi
 fi
 
 # If jic_root_dir does not exists, create it and all its subdirectories
@@ -139,7 +123,8 @@ if [ ${use_docker?} -eq 1 ]; then
 	if [ -z "$NGC_JOB_ID" ]; then
 	    docker_data_dir='/data'
 	else
-	    # Inside a NGC docker, we first copy the data to local machine and extract it
+	    # Inside a NGC docker, we first copy the data to local machine and
+	    # extract it
 	    docker_data_dir='/tmp'
 	    cp /data/*.tar /tmp
 	    mkdir -p /tmp/cocobu_att /tmp/cocotalk_fc
@@ -148,14 +133,6 @@ if [ ${use_docker?} -eq 1 ]; then
 	    pigz -dc /tmp/cocotalk_fc.tar | tar xf - -C /tmp/cocotalk_fc
 	    rm /tmp/*.tar 
 	fi
-else
-    if [ -z ${jic_code_dir} ]; then
-      jic_code_dir='/home/lab/vgilad/PycharmProjects/JointImageCaptioning/'
-    fi
-    echo "Script run by user: ${USER?}"
-    echo "Chosen code directory is ${jic_code_dir?}"
-    mail=${USER?}@gmail.com
-
 fi
 
 # set dirs and flags according to chosen optimization
@@ -272,24 +249,6 @@ if [ ${dataset?} = 'coco' ];then
   val_images_use=" --val_images_use 5000"
   max_epochs="350"
   more_args=""
-elif [ ${dataset?} = 'conceptual' ];then # conceptual captions
-  input_json=${input_json_conceptual?}
-  input_label_h5=${input_label_h5_conceptual?}
-  input_fc_dir=${input_fc_dir_conceptual?}
-  input_att_dir=${input_att_dir_conceptual?}
-  save_checkpoint_every="3000"
-  val_images_use=" --val_images_use 10000"
-  max_epochs="350"
-  more_args=""
-elif [ ${dataset?} = 'flickr8k' ];then # flickr8k captions
-  input_json=${input_json_flickr8k?}
-  input_label_h5=${input_label_h5_flickr8k?}
-  input_fc_dir=${input_fc_dir_flickr8k?}
-  input_att_dir=${input_att_dir_flickr8k?}
-  save_checkpoint_every="3000"  # In iterations
-  val_images_use=" --val_images_use 1000"
-  max_epochs="180"  # In epoch
-  more_args=" --input_encoding_size 128 --rnn_size 128 --vse_embed_size 256 "
 elif [ ${dataset?} = 'flickr30k' ];then # flickr30k captions
   input_json=${input_json_flickr30k?}
   input_label_h5=${input_label_h5_flickr30k?}
@@ -300,7 +259,6 @@ elif [ ${dataset?} = 'flickr30k' ];then # flickr30k captions
   max_epochs="300"  # In epoch
   more_args=""
 fi
-
 
 ####print to user####
 cat <<- xx
@@ -373,50 +331,17 @@ fi
 
 if [ ${use_docker?} -eq 1 ]; then
     # If we are inside a docker
-    echo ${cmd}
+    echo ${cmd?}
     ${cmd?}
 
 else
 # If we use GPU add the number of gpu to python command
-  if [ ${cpu?} -eq 0 ] && [ ${machine?} -eq 0 ] ; then
-    cmd="${cuda_cmd?}${cmd?}"
+  if [ ${cpu?} -eq 0 ] ; then
+#    cmd="${cuda_cmd?}${cmd?}"
+     export ${cuda_cmd?}
   fi
-  log_file="${jic_code_dir?}/logs/log_${dir?}.txt"
-  run_command="echo gpu=${gpu?} ; cd ${jic_code_dir?} ; "
-  run_command+="${conda_env?} || ${source_env?} ; "
-  run_command+="echo ${cmd?} ; ${cmd?} &> ${log_file?} ;"
-
-  # Run on current machine
-  if [ ${machine?} -eq 1 ]; then
-#    run_command="${conda_env?} || ${source_env?} ;"
-#    run_command="${cmd?} &> ${log_file?} ;"
-#    ${run_command?}
-     ${cmd?}
-#    (tail ${log_file?}) | mailx -s "New message regarding ${dir?}" ${mail?} &
-
-
-  # CPU or ctx19
-  elif [ ${cpu?} -eq 1 ] || [ ${DSISERVER?} -eq 19 ];then
-    ssh_command="ssh ctx${DSISERVER?}.lnx.biu.ac.il"
-    echo ${ssh_command?}
-    ${ssh_command?} "
-      ${run_command?}
-  " ssh cortex.lnx.biu.ac.il "
-      (tail ${log_file?}) | mailx -s 'New message regarding ${dir?}' ${mail?}
-  " &
-
-  elif [ ${cpu?} -eq 0 ];then
-    dsihead="ssh dsihead.lnx.biu.ac.il"
-    ssh_command="ssh dsigpu${DSISERVER?}"
-    echo ${ssh_command?}
-    ${dsihead?} "
-      ${ssh_command?} '
-        ${run_command?}
-  '
-  " ssh cortex.lnx.biu.ac.il "
-      (tail ${log_file?}) | mailx -s 'New message regarding ${dir?}' ${mail?}
-  " &
-  fi
+  echo ${cmd?}
+  ${cmd?}
 fi
 
 
