@@ -16,65 +16,6 @@ import os
 import sys
 import misc.utils as utils
 
-def create_chosen_gt(coco, preds):
-    batch_size = len(preds)
-    gt_captions_per_image = 5
-    list_of_gt_batch = [[] for x in range(batch_size)]
-    # coco_ids = [[] for x in range(batch_size)]
-    # Create a list were each element is a list of the five gt captions
-    print('Start building preds of ground truth captions with size {}'
-          .format(batch_size))
-    for index, image in enumerate(preds):
-        counting_to_five = 0
-        for id in coco.anns:
-            if image['image_id'] == coco.anns[id]['image_id']:
-                list_of_gt_batch[index].append(coco.anns[id])
-                counting_to_five += 1
-            if counting_to_five == gt_captions_per_image:
-                break
-                # coco_ids[index].append([id])
-    # Choose by random vector one out of the five ground truth captions
-    print("Finish build preds")
-    rand_vec = np.random.randint(gt_captions_per_image, size=batch_size)
-    chosen_gt = []
-    # chosen_coco_ids = []
-    print("Start build chosen_gt choosing only one ground truth "
-          "caption per image")
-    for index in range(batch_size):
-        # print(index)
-        chosen_gt.append(list_of_gt_batch[index][rand_vec[index]])
-        # chosen_coco_ids.append(coco_ids[index][rand_vec[index]])
-    print("Finish build chosen_gt, chosen gt length is {}"
-          .format(len(chosen_gt)))
-    return coco, chosen_gt
-
-def erase_gt_caption_from_coco(coco, chosen_gt):
-    # Delete chosen ground truth to evaluation from coco
-
-    gt_captions_per_image = 5
-    print("coco.anns length before erasing is {}".format(len(coco.anns)))
-    print("Start erasing chosen gt from coco")
-    for j, caption in enumerate(chosen_gt):
-        del coco.anns[caption['id']]
-        for i in range(gt_captions_per_image):
-            if coco.imgToAnns[caption['image_id']][i]['id'] == caption['id']:
-                del coco.imgToAnns[caption['image_id']][i]
-                break
-        for index in range(len(coco.dataset['annotations'])):
-            if coco.dataset['annotations'][index]['id'] == caption['id']:
-                del coco.dataset['annotations'][index]
-                # If chosen caption erased completely from coco - continue
-                break
-        # Erase all unused id
-        # del chosen_gt[j]['id']
-        # print("caption number {} erased" .format(j))
-    print("Finish erasing chosen gt from coco")
-    print("chosen_gt length is {}" .format(len(chosen_gt)))
-    # print("chosen_gt[0] is {}".format(chosen_gt[0]))
-    print("coco.anns after erasing length is {}" .format(len(coco.anns)))
-    return coco, chosen_gt
-
-
 def language_eval(dataset, preds, model_id, split, ckpt_path, annFile=None,
                   phase=0):
     import sys
@@ -88,8 +29,6 @@ def language_eval(dataset, preds, model_id, split, ckpt_path, annFile=None,
         annFile = 'coco-caption/annotations/captions_flickr8k.json'
     elif 'flickr30k' in dataset:
             annFile = 'coco-caption/annotations/captions_flickr30k.json'
-    # sys.path.append("f30k-caption")
-    # annFile = 'f30k-caption/annotations/dataset_flickr30k.json'
     from pycocotools.coco import COCO
     from pycocoevalcap.eval import COCOEvalCap
 
@@ -108,12 +47,6 @@ def language_eval(dataset, preds, model_id, split, ckpt_path, annFile=None,
     except:
         coco = COCO(os.path.join('..', annFile))
     valids = coco.getImgIds()
-    # Eval on ground truth if it phase 1 - listener training on ground truth
-    # captions
-    # if phase == 1:
-    #     coco, preds = create_chosen_gt(coco, preds)
-    #     coco, preds = erase_gt_caption_from_coco(coco, preds)
-
     preds_filt = [p for p in preds if p['image_id'] in valids]
     print('using %d/%d predictions' % (len(preds_filt), len(preds)))
     json.dump(preds_filt, open(cache_path,

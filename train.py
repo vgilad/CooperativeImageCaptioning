@@ -13,19 +13,14 @@ from __future__ import print_function
 import time
 from six.moves import cPickle
 import opts
-import sys
 import models
-from dataloader import *
 from dataloader_conceptual import *
 import eval_utils
 import misc.utils as utils
 from misc.rewards import init_scorer
-# import results.plots_general_curve as plots_general_curve
 from plots_general_curve import create_dicts_and_json_after_training
-import results.html as html
 from optimizer import load_optimizer, save_optimizer, zeroing_optimizer, \
     update_optimizer
-# os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 
 def polynomial_decay(epoch, decay_factor, power, initial_rate=1):
@@ -577,9 +572,6 @@ def main():
     # Create val and test dictionaries and json file
     # plots_general_curve.create_dicts_and_json_after_training(opt)
     create_dicts_and_json_after_training(opt)
-    # Create HTML file for the model
-    if opt.dataset == 'coco':
-        html.create_html_after_train(opt)
     print("Finished all")
 
 

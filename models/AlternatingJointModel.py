@@ -357,8 +357,9 @@ class AlternatingJointModel(nn.Module):
         # indices to one-hot vector
         if torch.cuda.is_available():
             # add manually BOS token to _seqs
-            one_hot_bos_token = torch.zeros(self.opt.batch_size, 1,
-                                            self.caption_generator.vocab_size + 2).cuda()
+            one_hot_bos_token = \
+                torch.zeros(self.opt.batch_size, 1,
+                            self.caption_generator.vocab_size + 2).cuda()
         else:  # CPU()
             # add manually BOS token to _seqs
             one_hot_bos_token = torch.zeros(self.opt.batch_size, 1,
