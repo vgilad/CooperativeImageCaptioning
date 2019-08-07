@@ -488,7 +488,8 @@ class AlternatingJointModel(nn.Module):
                                                   data, loss)
             # CIDER loss
             if self.cider_optimization:
-                if 'gen_result' not in locals():
+                if 'gen_result' not in locals() or self.retrieval_reward in \
+                        ['multinomial_soft', 'gumbel_softmax']:
                     gen_result, sample_logprobs, gen_masks = \
                         self.gen_result_for_cider(fc_feats, att_feats,
                                          att_masks)
