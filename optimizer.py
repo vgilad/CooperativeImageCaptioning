@@ -2,11 +2,10 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from dataloader import *
-import sys
 import torch.optim as optim
 from misc import utils
-
+import os
+import torch
 
 def load_optimizer_path(opt, curr_turn=None):
     if opt.is_alternating:
