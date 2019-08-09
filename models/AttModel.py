@@ -293,6 +293,15 @@ class AttModel(nn.Module):
         sample_max = opt.get('sample_max', 1)
         beam_size = opt.get('beam_size', 1)
         temperature = opt.get('temperature', 1.0)
+        # One-hot eos in the end of multinomial and gumbel methods
+        if torch.cuda.is_available():
+            eos_one_hot = torch.cat(
+                [torch.Tensor([1]).unsqueeze(1).cuda(),
+                 torch.zeros(1, self.logit.weight.shape[0]).cuda()], 1)
+        else:
+            eos_one_hot = torch.cat(
+                [torch.Tensor([1]).unsqueeze(1),
+                 torch.zeros(1, self.logit.weight.shape[0])], 1)
         decoding_constraint = opt.get('decoding_constraint',
                                       self.decoding_constraint)
         if beam_size > 1:
@@ -406,6 +415,10 @@ class AttModel(nn.Module):
                     word_index.append(it)  # seq[t] the input of t+2 time step
                     one_hot = one_hot * unfinished.unsqueeze(1).\
                         type_as(it.type(torch.float32))
+                    # If at least one sentence had been completed
+                    if any(unfinished == 0):
+                        one_hot[unfinished == 0, :] = eos_one_hot
+
                     seq.append(one_hot)  # seq[t] the input of t+2 time step
                     seqLogprobs.append(sampleLogprobs.view(-1))
 
@@ -414,6 +427,9 @@ class AttModel(nn.Module):
                     word_index.append(it)  # seq[t] the input of t+2 time step
                     soft_vec = soft_vec * unfinished.unsqueeze(1).\
                         type_as(it.type(torch.float32))
+                    # If at least one sentence had been completed
+                    if any(unfinished == 0):
+                        soft_vec[unfinished == 0, :] = eos_one_hot
                     seq.append(soft_vec)  # seq[t] the input of t+2 time step
                     seqLogprobs.append(sampleLogprobs.view(-1))
 
