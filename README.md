@@ -41,7 +41,7 @@ export jic_root_dir="location/for/your/future/trained/models"
 #### Option 1: Download pre-processed data
 
 From https://github.com/ruotianluo/DiscCaptioning use the following [link](https://drive.google.com/drive/folders/1Z9bfvkRT5YyikmNgzPbybezYj9mi4TE2)
-dowlonad the data files to the right locations set above in your .bashrc with the commands below
+download the data files to the right locations set above in your .bashrc with the commands below
 ```
 mkdir -p ${input_fc_dir_coco}
 ${jic_code_dir}/preprocess/gdown.pl https://drive.google.com/open?id=10ZLGwTQyd7EztJI7Hm_DILIhv01V9ine "`dirname ${input_fc_dir_coco}`/cocotalk_fc.tar" && tar -C ${input_fc_dir_coco} -xvf "`dirname ${input_fc_dir_coco}`/cocotalk_fc.tar" 
