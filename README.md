@@ -111,6 +111,6 @@ See more examples in bash_scripts/run_joint.sh
    year = {2019}
 }
 ```
-The code for this project is based on https://github.com/ruotianluo/DiscCaptioning, we thank the authors for making teir cide available and for their support of the project.
+The code for this project is based on https://github.com/ruotianluo/DiscCaptioning, we thank the authors for making their code available and for their support of the project.
 
 This research was supported by an Israel science foundation grant 737/18
