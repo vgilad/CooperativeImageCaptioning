@@ -66,7 +66,7 @@ mkdir -p ${jic_root_dir}/pretrained_models
 ${jic_code_dir}/preprocess/gdown.pl https://drive.google.com/open?id=1rHWUKMDEw9YdVxTFQmAysKy9eI454c9f ${jic_root_dir}/pretrained_models/log_att.tar && tar -C ${jic_root_dir}/pretrained_models -xvf ${jic_root_dir}/pretrained_models/log_att.tar
 ${jic_code_dir}/preprocess/gdown.pl https://drive.google.com/open?id=1ALvSH-NpaRBB2n-qTzauGdm0knfWjzly ${jic_root_dir}/pretrained_models/log_fc_con.tar && tar -C ${jic_root_dir}/pretrained_models -xvf ${jic_root_dir}/pretrained_models/log_fc_con.tar
 ```
-#### Option 2: Pre-trained he models yourself
+#### Option 2: Pre-trained the models yourself
 Pretrain the discriminator with human captions.
 ```
 bash_scripts/run_fc_con.sh
