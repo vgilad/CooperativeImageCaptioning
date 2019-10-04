@@ -350,10 +350,7 @@ def encode_data(model, loader, eval_kwargs={}, useGenSent=False):
                     fc_feats, att_feats],
                     cuda=torch.cuda.is_available(), volatile=True), att_masks,
                     opt={'sample_max': 1, 'temperature': 1})
-            # DEBUG:
-            #            sents = utils.decode_sequence(loader.get_vocab(), seq.data)
-            #            print('The generated sentences for the encoding data are : \n {}'.format(sents))
-            # DEBUG end
+
             img_emb = model.vse.img_enc(fc_feats)
             # using generated sentence instead of labels
             beginningOfSenChar = (torch.ones(seq.shape[0]) * (
@@ -754,7 +751,6 @@ def evalrankcap(model, loader, eval_kwargs={}, useGenSent=False):
               "r1 {} \n r5 {} \n r10 {} \n median {} \n mean {}"
               .format(m2gt[0], m2gt[1], m2gt[2], m2gt[3], m2gt[4]))
 
-        # print("rsum: %.1f" % rsum)  # sum of all recalls (3*t2i )
         #  Ground truth to machine generated
         gt2m = gt2gen(cap_embs_generated, cap_embs_gt,
                                          images_data, measure='cosine',
@@ -797,7 +793,6 @@ def evalrankcap(model, loader, eval_kwargs={}, useGenSent=False):
                   "retrieval:\n " "r1 {} \n r5 {} \n r10 {} \n median {} \n mean {}"
                   .format(half, m2gt[0], m2gt[1], m2gt[2], m2gt[3], m2gt[4]))
 
-            # print("rsum: %.1f" % rsum)  # sum of all recalls (3*t2i )
             #  Ground truth to machine generated
             gt2m = gt2gen(cap_emb_generated, cap_emb_gt,
                           images_data, measure='cosine',
@@ -886,7 +881,6 @@ def encode_data_cap(model, loader, eval_kwargs={}, useGenSent=False):
                                     volatile=True)
             fc_feats, att_feats, att_masks = tmp
             # forward the model to also get generated samples for each image
-            # seq, _ = model.sample(fc_feats, att_feats, att_masks, opt=eval_kwargs)
             # sample using argmax
             seq, _ = model.caption_generator.sample(*utils.var_wrapper([
                 fc_feats, att_feats, att_masks], cuda=torch.cuda.is_available(),
@@ -945,20 +939,15 @@ def encode_data_cap(model, loader, eval_kwargs={}, useGenSent=False):
 
             print("%d/%d" % (n, ix1))
 
-    # img_embs = np.vstack(img_embs)
     cap_embs_gt = np.vstack(cap_embs_gt)
     cap_embs_generated = np.vstack(cap_embs_generated)
 
-    # assert img_embs.shape[0] == ix1 * loader.seq_per_img
     assert cap_embs_generated.shape[0] == ix1
     assert cap_embs_gt.shape[0] == ix1 * loader.seq_per_img
 
     loader.seq_per_img = loader_seq_per_img
 
     return img_embs, cap_embs_gt, cap_embs_generated, images_data
-
-
-# def t2t(images, captions, npts=None, measure='cosine', return_ranks=False):
 
 
 def gen2gt(cap_embs_generated, cap_embs_gt, npts=None, measure='cosine',
@@ -979,7 +968,6 @@ def gen2gt(cap_embs_generated, cap_embs_gt, npts=None, measure='cosine',
     for index in range(npts):
 
         # Get query image
-        # im = images[5 * index].reshape(1, images.shape[1])
         cap = cap_embs_generated[index].reshape(1, cap_embs_generated.shape[1])
 
         # Compute scores
@@ -1090,7 +1078,6 @@ def encode_data_halves(model, loader, eval_kwargs={}, useGenSent=False):
             fc_feats, att_feats, labels, masks = tmp
 
             img_emb = model.vse.img_enc(fc_feats)
-            # cap_emb_gt = model.cap.txt_enc_generated(labels, masks)
 
             '''
             Make a generated sampled sentence per image
@@ -1107,7 +1094,6 @@ def encode_data_halves(model, loader, eval_kwargs={}, useGenSent=False):
                                     volatile=True)
             fc_feats, att_feats, att_masks = tmp
             # forward the model to also get generated samples for each image
-            # seq, _ = model.sample(fc_feats, att_feats, att_masks, opt=eval_kwargs)
             # sample using argmax
             seq, _ = model.caption_generator.sample(*utils.var_wrapper([
                 fc_feats, att_feats, att_masks], cuda=torch.cuda.is_available(),
@@ -1157,25 +1143,12 @@ def encode_data_halves(model, loader, eval_kwargs={}, useGenSent=False):
             else:
                 half = int((shortest_caption - 1).cpu().numpy())
 
-            # # First half
-            # cap_emb_gt_first_half = model.cap.txt_enc_generated(labels[:, :half],
-            #                                          masks[:, :half])
-            # cap_emb_generated_first_half = model.cap.txt_enc_generated(seq[:, :half],
-            #                                                 seq_masks[:, :half])
-            #
-            # # Second half
-            # cap_emb_gt_second_half = model.cap.txt_enc_gt(labels[:, :half],
-            #                                   masks[:, :half])
-            # cap_emb_generated_second_half = model.cap.txt_enc_gt(seq[:, :half],
-            #                                          seq_masks[:, :half])
-
-
             if divide_by_second_half:
                 # Make sure that the second half is equal between generated and
                 # ground truth pairs
                 # Ground truth calculate from which token to split to make the
-                # length of the second part of the ground truth caption the same as
-                # the second part of the corresponding generated caption
+                # length of the second part of the ground truth caption the
+                # same as the second part of the corresponding generated caption
                 gt_len = torch.sum(masks, dim=1).cpu().numpy() - 2
                 half_gt = (gt_len - half)
 
@@ -1183,7 +1156,8 @@ def encode_data_halves(model, loader, eval_kwargs={}, useGenSent=False):
                 generated_len = torch.sum(seq_masks, dim=1).cpu().numpy() - 1
                 half_generated = (generated_len - half)
 
-                second_caption_length = int(generated_len[0] - half_generated[0])
+                second_caption_length = int(generated_len[0] -
+                                            half_generated[0])
 
                 # Create new tensors for first and second splits
                 seq_second = torch.zeros(batch_size * loader.seq_per_img,
@@ -1193,11 +1167,6 @@ def encode_data_halves(model, loader, eval_kwargs={}, useGenSent=False):
                 gen_seqs_second = torch.zeros(batch_size, second_caption_length)
                 gen_masks_second = torch.zeros(batch_size,
                                                second_caption_length)
-
-                # seq_first = torch.zeros(self.batch_size, half)
-                # masks_first = torch.zeros(self.batch_size, half)
-                # gen_seqs_first = torch.zeros(self.batch_size, half)
-                # gen_masks_first = torch.zeros(self.batch_size, half)
 
                 for i in range(batch_size*loader.seq_per_img):
                     seq_second[i, :] = labels[i, int(half_gt[i]):int(gt_len[i])]
@@ -1252,7 +1221,8 @@ def encode_data_halves(model, loader, eval_kwargs={}, useGenSent=False):
 
 
 
-            # if we wrapped around the split or used up val imgs budget then bail
+            # if we wrapped around the split or used up val imgs budget
+            # then bail
             ix0 = data['bounds']['it_pos_now']
             ix1 = data['bounds']['it_max']
             if num_images != -1:
@@ -1270,8 +1240,9 @@ def encode_data_halves(model, loader, eval_kwargs={}, useGenSent=False):
                                         :(ix1 - n) * loader.seq_per_img]
                 cap_emb_generated_second_half = cap_emb_generated_second_half[
                                                :(ix1 - n)]
+                # save only the necessary images id from the batch
                 images_data += data['infos'][:(
-                        ix1 - n)]  # save only the necessary images id from the batch
+                        ix1 - n)]
             else:
                 images_data += data['infos']  # save all batch images id
 
@@ -1280,7 +1251,8 @@ def encode_data_halves(model, loader, eval_kwargs={}, useGenSent=False):
             # First half
             cap_embs_gt_first_half.append(
                 cap_emb_gt_first_half.data.cpu().numpy().copy())
-            cap_embs_generated_first_half.append(cap_emb_generated_first_half.data.cpu().numpy().copy())
+            cap_embs_generated_first_half.append(cap_emb_generated_first_half.
+                                                 data.cpu().numpy().copy())
             # Second half
             cap_embs_gt_second_half.append(
                 cap_emb_gt_second_half.data.cpu().numpy().copy())
@@ -1294,13 +1266,13 @@ def encode_data_halves(model, loader, eval_kwargs={}, useGenSent=False):
 
             print("%d/%d" % (n, ix1))
 
-    # img_embs = np.vstack(img_embs)
         # First half
         cap_embs_gt_first_half = np.vstack(cap_embs_gt_first_half)
         cap_embs_generated_first_half = np.vstack(cap_embs_generated_first_half)
         # Second half
         cap_embs_gt_second_half = np.vstack(cap_embs_gt_second_half)
-        cap_embs_generated_second_half = np.vstack(cap_embs_generated_second_half)
+        cap_embs_generated_second_half = np.vstack(
+            cap_embs_generated_second_half)
 
     # assert img_embs.shape[0] == ix1 * loader.seq_per_img
     assert cap_embs_generated_first_half.shape[0] == ix1

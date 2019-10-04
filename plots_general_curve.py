@@ -94,7 +94,10 @@ def model_doesnt_need_update(val_dict_name, specific_model_dir,
 
 
 def create_json(opt, handle_specific_model=0):
-
+    # Results in json file is taken for the best model which can be Recall@10,
+    # CIDEr or Bleu4. In each (Recall / CIDEr / Bleu4) results for all
+    # metrics, such as Recall@[1,5,10], CIDEr, Bleu4, ROUGH, Meteor and SPICE,
+    # are shown.
     if handle_specific_model:
         model_dir, dir = handle_specific_model.rsplit("/", 1)
         model_dirs = [model_dir]
@@ -114,47 +117,39 @@ def create_json(opt, handle_specific_model=0):
         splits = ['val', 'test']
         for iteration in histories['val_result_history']:
             for split in splits:
+                lang_list = [('cider_' + split, 'CIDEr'),
+                             ('bleu4_' + split, 'Bleu_4')]
+                iteration_history = histories['val_result_history'][iteration]
                 recall_split = 't2i_r10_' + split
-                cider_split = 'cider_' + split
-                bleu_split = 'bleu4_' + split
                 iteration_split = 'iteration_' + split
                 if not collect_results.get('bleu4_test'):
                     collect_results[iteration_split] = [iteration]
                     collect_results[recall_split] = \
-                        [histories['val_result_history'][iteration]['loss'][
-                             split]['t2i_r10']]
-                    collect_results[cider_split] = \
-                        [histories['val_result_history'][iteration][
-                             'lang_stats'][split]['CIDEr']]
-                    collect_results[bleu_split] = \
-                        [histories['val_result_history'][iteration][
-                             'lang_stats'][split]['Bleu_4']]
+                        [iteration_history['loss'][split]['t2i_r10']]
+                    for lang_metric in lang_list:
+                        collect_results[lang_metric[0]] = \
+                            [iteration_history['lang_stats'][split][
+                                 lang_metric[1]]]
                     if split == 'test':
-                        collect_results[recall_split] = \
-                            [histories['val_result_history'][iteration][
-                                 'loss'][split]['t2i_r1']]
-                        collect_results[recall_split] = \
-                            [histories['val_result_history'][iteration][
-                                 'loss'][split]['t2i_r5']]
+                        recall_list = ['t2i_r1', 't2i_r5']
+                        for recall_metric in recall_list:
+                            collect_results[recall_split] = \
+                                [iteration_history['loss'][split][
+                                     recall_metric]]
+                ###############################
 
                 else:
                     collect_results[iteration_split].append(iteration)
                     collect_results[recall_split].append(
-                        histories['val_result_history'][iteration][
-                            'loss'][split]['t2i_r10'])
-                    collect_results[cider_split].append(
-                        histories['val_result_history'][iteration][
-                            'lang_stats'][split]['CIDEr'])
-                    collect_results[bleu_split].append(
-                        histories['val_result_history'][iteration][
-                            'lang_stats'][split]['Bleu_4'])
+                        iteration_history['loss'][split]['t2i_r10'])
+                    for lang_metric in lang_list:
+                        collect_results[lang_metric[0]].append(
+                            iteration_history['lang_stats'][split][
+                                lang_metric[1]])
                     if split == 'test':
                         collect_results[recall_split].append(
-                            histories['val_result_history'][iteration][
-                                'loss'][split]['t2i_r10'])
-                        collect_results[recall_split].append(
-                            histories['val_result_history'][iteration][
-                                'loss'][split]['t2i_r10'])
+                            iteration_history['loss'][split]['t2i_r10'])
+
 
         # Find best recall @ 10 in validation set
         argmax_of_val_recall = np.argmax(collect_results['t2i_r10_val'])
@@ -246,61 +241,33 @@ def create_json(opt, handle_specific_model=0):
                                             best_model]]})
 
                 elif split == 'test':
+                    recall_k = [('t2i_r10_test', 't2i_r10'),
+                                ('t2i_r5_test', 't2i_r5'),
+                                ('t2i_r1_test', 't2i_r1')]
+                    language_metrics = [('cider_test', 'CIDEr'),
+                                        ('bleu4_test', 'Bleu_4'),
+                                        ('meteor_test', 'METEOR'),
+                                        ('rouge_l_test', 'ROUGE_L'),
+                                        ('spice_test', 'SPICE'),
+                                        ('spice_color_test', 'SPICE_Color'),
+                                        ('spice_attribute_test',
+                                         'SPICE_Attribute'),
+                                        ('spice_object_test', 'SPICE_Object'),
+                                        ('spice_relation_test',
+                                         'SPICE_Relation'),
+                                        ('spice_cardinality_test',
+                                         'SPICE_Cardinality'),
+                                        ('spice_size_test', 'SPICE_Size')]
                     for best_model in model_best_by:
-                        metric_and_split = ['t2i_r10_test', 't2i_r5_test',
-                                            't2i_r1_test', 'cider_test',
-                                            'bleu4_test', 'meteor_test',
-                                            'rouge_l_test', 'spice_test',
-                                            'spice_color_test',
-                                            'spice_attribute_test',
-                                            'spice_object_test',
-                                            'spice_relation_test',
-                                            'spice_cardinality_test',
-                                            'spice_size_test']
-                        json_dictionary[best_model].update({
-                            metric_and_split[0]:test_dict[model_name][
-                                best_model]['loss']['t2i_r10']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[1]: test_dict[model_name][
-                                best_model]['loss']['t2i_r5']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[2]: test_dict[model_name][
-                                best_model]['loss']['t2i_r1']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[3]:test_dict[model_name][
-                                best_model]['lang_stats']['CIDEr']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[4]:test_dict[model_name][
-                                best_model]['lang_stats']['Bleu_4']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[5]:test_dict[model_name][
-                                best_model]['lang_stats']['METEOR']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[6]:test_dict[model_name][
-                                best_model]['lang_stats']['ROUGE_L']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[7]:test_dict[model_name][
-                                best_model]['lang_stats']['SPICE']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[8]:test_dict[model_name][
-                                best_model]['lang_stats']['SPICE_Color']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[9]:test_dict[model_name][
-                                best_model]['lang_stats']['SPICE_Attribute']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[10]:test_dict[model_name][
-                                best_model]['lang_stats']['SPICE_Object']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[11]:test_dict[model_name][
-                                best_model]['lang_stats']['SPICE_Relation']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[12]:test_dict[model_name][
-                                best_model]['lang_stats']['SPICE_Cardinality']})
-                        json_dictionary[best_model].update({
-                            metric_and_split[13]:test_dict[model_name][
-                                best_model]['lang_stats']['SPICE_Size']})
 
-
+                        for k in recall_k:
+                            json_dictionary[best_model].update({
+                                k[0]:test_dict[model_name][
+                                    best_model]['loss'][k[1]]})
+                        for lang in language_metrics:
+                            json_dictionary[best_model].update({
+                                lang[0]: test_dict[model_name][
+                                    best_model]['lang_stats'][lang[1]]})
             # opts
             for arg in vars(infos['opt']):
                 if not json_dictionary.get('opt'):

@@ -14,7 +14,7 @@ import time
 from six.moves import cPickle
 import opts
 import models
-from dataloader_conceptual import *
+from dataloader import *
 import eval_utils
 import misc.utils as utils
 from misc.rewards import init_scorer
@@ -349,8 +349,7 @@ def save_best_results(best_flag, best_flag_vse, opt, args, model, infos):
 
 def load_infos_histories_loader(opt):
     opt.use_att = utils.if_use_att(opt)
-    # loader = DataLoader(opt)
-    loader = DataLoader_conceptual(opt)
+    loader = DataLoader(opt)
     opt.vocab_size = loader.vocab_size
     opt.seq_length = loader.seq_length
     infos = load_infos(opt)

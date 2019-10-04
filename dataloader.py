@@ -53,7 +53,7 @@ class HybridLoader:
         return feat
 
 
-class DataLoader_conceptual(data.Dataset):
+class DataLoader(data.Dataset):
 
     def reset_iterator(self, split):
         del self._prefetch_process[split]

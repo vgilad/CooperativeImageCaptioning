@@ -117,6 +117,7 @@ mkdir -p ${jic_root_dir?}/reinforce_speaker
 mkdir -p ${jic_root_dir?}/reinforce_listener
 mkdir -p ${jic_root_dir?}/json_dir
 
+# In case a docker is used.
 if [ ${use_docker?} -eq 1 ]; then
     jic_code_dir='/project/DC/'
 	USER="docker"
@@ -324,10 +325,8 @@ cmd+=" ${softmax_cooling_decay_factor?} --dataset ${dataset?}"
 cmd+=" ${more_args?} ${temperature_annealing_factor?}"
 cmd+=" ${num_iteration_for_annealing?}"
 
-cd ${jic_code_dir?}
-if [ ! -d "logs/" ]; then
-  mkdir "logs/"
-fi
+pushd ${jic_code_dir?}
+mkdir -p "logs/"
 
 if [ ${use_docker?} -eq 1 ]; then
     # If we are inside a docker

@@ -10,9 +10,7 @@ import os
 from six.moves import cPickle
 import opts
 import models
-# from dataloader import *
-from dataloader_conceptual import *
-# from dataloaderraw import *
+from dataloader import *
 import eval_utils
 import argparse
 import misc.utils as utils
@@ -82,8 +80,7 @@ def eval(opt, model_name, infos_name, annFile, listener, split, iteration):
     model.eval()
 
     # Create the Data Loader instance
-    # loader = DataLoader(opt)
-    loader = DataLoader_conceptual(opt)
+    loader = DataLoader(opt)
     # Set sample options
     loss, split_predictions, lang_stats = eval_utils.eval_split(model, loader,
                                                                 vars(opt),
